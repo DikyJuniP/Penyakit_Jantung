@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 import seaborn as sns
@@ -6,10 +7,10 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, roc_auc_score, roc_curve
 
 st.set_page_config(page_title="Prediksi Penyakit Jantung", layout="wide")
-st.markdown("# 🫀 Prediksi Penyakit Jantung")
+st.markdown("# 🪀 Prediksi Penyakit Jantung")
 st.markdown("Perbandingan algoritma **K-Nearest Neighbors** dan **Logistic Regression** berdasarkan dataset kesehatan.")
 
 # --- Load Dataset
@@ -45,14 +46,34 @@ y_pred_logreg = logreg.predict(X_test)
 acc_knn = accuracy_score(y_test, y_pred_knn)
 acc_logreg = accuracy_score(y_test, y_pred_logreg)
 
-st.subheader("📈 Akurasi Model")
+roc_knn = roc_auc_score(y_test, knn.predict_proba(X_test)[:, 1])
+roc_logreg = roc_auc_score(y_test, logreg.predict_proba(X_test)[:, 1])
+
+st.subheader("📈 Evaluasi Model (ROC-AUC)")
 col1, col2 = st.columns(2)
 with col1:
-    st.metric("KNN (K=5)", f"{acc_knn*100:.2f}%")
+    st.metric("KNN (K=5)", f"{roc_knn:.3f}")
 with col2:
-    st.metric("Logistic Regression", f"{acc_logreg*100:.2f}%")
+    st.metric("Logistic Regression", f"{roc_logreg:.3f}")
+
+# --- ROC Curve
+fpr_knn, tpr_knn, _ = roc_curve(y_test, knn.predict_proba(X_test)[:, 1])
+fpr_logreg, tpr_logreg, _ = roc_curve(y_test, logreg.predict_proba(X_test)[:, 1])
+
+fig, ax = plt.subplots()
+ax.plot(fpr_knn, tpr_knn, label=f"KNN (AUC = {roc_knn:.3f})")
+ax.plot(fpr_logreg, tpr_logreg, label=f"Logistic Regression (AUC = {roc_logreg:.3f})")
+ax.plot([0, 1], [0, 1], 'k--')
+ax.set_xlabel("False Positive Rate")
+ax.set_ylabel("True Positive Rate")
+ax.set_title("ROC Curve")
+ax.legend()
+st.pyplot(fig)
 
 # --- Confusion Matrix
+st.subheader("🧹 Confusion Matrix")
+col1, col2 = st.columns(2)
+
 def plot_conf_matrix(y_true, y_pred, title):
     cm = confusion_matrix(y_true, y_pred)
     fig, ax = plt.subplots()
@@ -62,8 +83,6 @@ def plot_conf_matrix(y_true, y_pred, title):
     ax.set_ylabel("Actual")
     st.pyplot(fig)
 
-st.subheader("🧩 Confusion Matrix")
-col1, col2 = st.columns(2)
 with col1:
     st.markdown("##### KNN")
     plot_conf_matrix(y_test, y_pred_knn, "KNN")
@@ -78,7 +97,7 @@ with st.expander("Tampilkan Detail"):
     st.text("Logistic Regression:\n" + classification_report(y_test, y_pred_logreg))
 
 # --- Input Manual untuk Prediksi
-st.subheader("🧪 Coba Prediksi dari Input Manual")
+st.subheader("🪪 Coba Prediksi dari Input Manual")
 with st.form("prediction_form"):
     st.markdown("Masukkan data pasien:")
     col1, col2 = st.columns(2)
